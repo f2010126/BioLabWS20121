@@ -141,44 +141,37 @@ class NeedlemanWunsch:
         return seq1_align, seq2_align
 
     def alignment_top(self, traceback, seq1, seq2):
-        print("here")
         i = 0
         j = 0
         align1 = ''
         align2 = ''
         for step in traceback:
             if step == 'diagonal':
-                print(f"diagonal move")
                 align1 += seq1[i]
                 align2 += seq2[j]
                 i += 1
                 j += 1
             elif step == 'up':
-                print(f"go down")
                 align1 += seq1[i]
                 align2 += '-'
                 i += 1
             elif step == 'left':
-                print(f"go right")
+                align1 += '-'
+                align2 += seq2[j]
+                j += 1
 
-        print(f"align1 {align1}, align2 {align2}")
+        print(f"align1 {align1} \nalign2 {align2}")
         return align1, align2
 
 
 if __name__ == '__main__':
 
     algo = NeedlemanWunsch()
-    # seq1 = algo.read_fasta_file("data/s1.fasta")
-    # seq2 = algo.read_fasta_file("data/s2.fasta")
+    seq1 = algo.read_fasta_file("data/s1.fasta")
+    seq2 = algo.read_fasta_file("data/s2.fasta")
     gap_cost = BLOSUM62_GAP
     scoreMatrix = algo.read_substitution_matrix("data/blosum62.txt")
-    seq1 = "ATTAC"
-    seq2 = "ATGCT"
     finished_matrix = algo.calculate_matrix(seq1, seq2, gap_cost, scoreMatrix)
-    print(finished_matrix)
     traceback = algo.traceback(finished_matrix, seq1, seq2, gap_cost, scoreMatrix)
-    print(traceback)
     algo.alignment_top(traceback, seq1, seq2)
-    final_align1, final_align2 = algo.alingment_build(traceback, seq1, seq2)
-    print("Done")
     # Tool to test o/p https://gtuckerkellogg.github.io/pairwise/demo/
