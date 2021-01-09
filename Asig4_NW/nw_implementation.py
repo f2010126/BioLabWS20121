@@ -65,16 +65,104 @@ class NeedlemanWunsch:
         Implement the step of complete computation of the matrix
         First initialize the matrix then fill it in from top to bottom.
         """
-        matrix = self.init_matrix(seq1, seq2, gap_cost)
+        matrix = self.init_matrix(sequence1, sequence2, gap_opening_cost)
         for i in range(1, len(seq1)+1):
 
             for j in range(1, len(seq2)+1):
-                top = matrix[i][j-1] # insert
-                left = matrix[i-1][j] # delete
+                top = matrix[i][j-1]  # insert
+                left = matrix[i-1][j]  # delete
                 diag = matrix[i-1][j-1]
-                matrix[i][j] = self.new_value_computation(seq1[i-1],seq2[j-1],gap_cost,scoreMatrix,diag,top,left)
+                matrix[i][j] = self.new_value_computation(seq1[i-1], seq2[j-1], gap_cost, scoreMatrix, diag, top, left)
 
         return matrix
+
+    def traceback(self, matrix, sequence1, sequence2, gap_opening_cost, substitution_cost):
+        """
+        Implement the traceback part of the algorithm
+        With the given matrix traceback which cells were taken to complete the path from
+        the top left corner to the bottom right corner.
+        """
+        i = len(sequence1)
+        j = len(sequence2)
+        traceback = []
+
+        while i > 0 and j > 0:
+            score = matrix[i][j]
+            diag = matrix[i-1][j-1]
+            left = matrix[i][j-1]
+            top = matrix[i-1][j]
+
+            if score == (diag + substitution_cost[sequence1[i-1]][sequence2[j-1]]):
+                traceback.append("diagonal")
+                i -= 1
+                j -= 1
+            elif score == (top + gap_opening_cost):
+                traceback.append("up")
+                i -= 1
+            elif score == (left + gap_opening_cost):
+                traceback.append("left")
+                j -= 1
+
+        while i > 0:
+            i -= 1
+
+        while j > 0:
+            j -= 1
+
+        return traceback[::-1]
+
+    def alingment_build(self, traceback, sequence1, sequence2):
+        """
+        Implement the alingment creation.
+        Given the traceback figure out which editing operations were used to create the alingment.
+        """
+        i = len(sequence1)
+        j = len(sequence2)
+        seq1_align = ""
+        seq2_align = ""
+
+        for step in traceback:
+            if step == "diagonal":
+                seq1_align += sequence1[i]
+                seq2_align += sequence2[j]
+                i -= 1
+                j -= 1
+
+            elif step == "up":
+                seq1_align += '-'
+                seq2_align += sequence2[j]
+                j -= 1
+
+            elif step == "left":
+                seq1_align -= sequence1[i]
+                seq2_align -= '-'
+                i -= 1
+
+        return seq1_align, seq2_align
+
+    def alignment_top(self, traceback, seq1, seq2):
+        print("here")
+        i = 0
+        j = 0
+        align1 = ''
+        align2 = ''
+        for step in traceback:
+            if step == 'diagonal':
+                print(f"diagonal move")
+                align1 += seq1[i]
+                align2 += seq2[j]
+                i += 1
+                j += 1
+            elif step == 'up':
+                print(f"go down")
+                align1 += seq1[i]
+                align2 += '-'
+                i += 1
+            elif step == 'left':
+                print(f"go right")
+
+        print(f"align1 {align1}, align2 {align2}")
+        return align1, align2
 
 
 if __name__ == '__main__':
@@ -84,13 +172,13 @@ if __name__ == '__main__':
     # seq2 = algo.read_fasta_file("data/s2.fasta")
     gap_cost = BLOSUM62_GAP
     scoreMatrix = algo.read_substitution_matrix("data/blosum62.txt")
-    seq1 = "AATC"
-    seq2 = "AACGA"
+    seq1 = "ATTAC"
+    seq2 = "ATGCT"
     finished_matrix = algo.calculate_matrix(seq1, seq2, gap_cost, scoreMatrix)
     print(finished_matrix)
-    #traceback = algo.traceback(finished_matrix,seq1,seq2,gap_cost,scoreMatrix)
-    #print(traceback)
-    # final_alignments = algo.alingment_build(traceback, seq1, seq2)
-    # print(final_alignments)
+    traceback = algo.traceback(finished_matrix, seq1, seq2, gap_cost, scoreMatrix)
+    print(traceback)
+    algo.alignment_top(traceback, seq1, seq2)
+    final_align1, final_align2 = algo.alingment_build(traceback, seq1, seq2)
     print("Done")
     # Tool to test o/p https://gtuckerkellogg.github.io/pairwise/demo/
