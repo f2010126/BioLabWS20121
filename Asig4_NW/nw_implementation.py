@@ -2,6 +2,7 @@ import fastaparser
 import numpy as np
 import pandas as pd
 
+
 PAM_GAP = -8
 BLOSUM62_GAP = -6
 
@@ -55,7 +56,6 @@ class NeedlemanWunsch:
         Assume that the values "to the left", "to the top" and "top left" are already computed and provided
         as the input to the function. Also we know what characters in both sequences correspond to the given cell.
         """
-
         match = diag_val + substitution_matrix[char_seq1][char_seq2]
         cell_value = max(top_val + gap_cost, match, left_val + gap_cost)  # cell_value
         return cell_value
@@ -109,15 +109,15 @@ class NeedlemanWunsch:
         while j > 0:
             j -= 1
 
-        return traceback[::-1]
+        return traceback
 
     def alingment_build(self, traceback, sequence1, sequence2):
         """
         Implement the alingment creation.
         Given the traceback figure out which editing operations were used to create the alingment.
         """
-        i = len(sequence1)
-        j = len(sequence2)
+        i = len(sequence1) - 1
+        j = len(sequence2) - 1
         seq1_align = ""
         seq2_align = ""
 
