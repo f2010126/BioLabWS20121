@@ -129,49 +129,41 @@ class NeedlemanWunsch:
                 j -= 1
 
             elif step == "up":
-                seq1_align += '-'
-                seq2_align += sequence2[j]
-                j -= 1
+                seq1_align += sequence1[i]
+                seq2_align += '-'
+                i -= 1
 
             elif step == "left":
                 seq1_align -= sequence1[i]
                 seq2_align -= '-'
                 i -= 1
 
-        return seq1_align, seq2_align
+        while j >= 0:
+            seq1_align += '-'
+            seq2_align += sequence2[j]
+            j -= 1
 
-    def alignment_top(self, traceback, seq1, seq2):
-        i = 0
-        j = 0
-        align1 = ''
-        align2 = ''
-        for step in traceback:
-            if step == 'diagonal':
-                align1 += seq1[i]
-                align2 += seq2[j]
-                i += 1
-                j += 1
-            elif step == 'up':
-                align1 += seq1[i]
-                align2 += '-'
-                i += 1
-            elif step == 'left':
-                align1 += '-'
-                align2 += seq2[j]
-                j += 1
+        while i >= 0:
+            seq2_align += '-'
+            seq1_align += sequence1[i]
+            i -= 1
+        return seq1_align[::-1], seq2_align[::-1]
 
-        print(f"align1 {align1} \nalign2 {align2}")
-        return align1, align2
 
 
 if __name__ == '__main__':
 
     algo = NeedlemanWunsch()
-    seq1 = algo.read_fasta_file("data/s1.fasta")
-    seq2 = algo.read_fasta_file("data/s2.fasta")
+    # seq1 = algo.read_fasta_file("data/s1.fasta")
+    # seq2 = algo.read_fasta_file("data/s2.fasta")
+
+    seq1 = 'GGAACT'
+    seq2 = 'ACTT'
     gap_cost = BLOSUM62_GAP
     scoreMatrix = algo.read_substitution_matrix("data/blosum62.txt")
     finished_matrix = algo.calculate_matrix(seq1, seq2, gap_cost, scoreMatrix)
     traceback = algo.traceback(finished_matrix, seq1, seq2, gap_cost, scoreMatrix)
-    algo.alignment_top(traceback, seq1, seq2)
+    align1, align2 = algo.alingment_build(traceback, seq1, seq2)
     # Tool to test o/p https://gtuckerkellogg.github.io/pairwise/demo/
+
+
