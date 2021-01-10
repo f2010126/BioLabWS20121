@@ -67,7 +67,6 @@ class NeedlemanWunsch:
         """
         matrix = self.init_matrix(sequence1, sequence2, gap_opening_cost)
         for i in range(1, len(seq1)+1):
-
             for j in range(1, len(seq2)+1):
                 top = matrix[i][j-1]  # insert
                 left = matrix[i-1][j]  # delete
@@ -85,13 +84,11 @@ class NeedlemanWunsch:
         i = len(sequence1)
         j = len(sequence2)
         traceback = []
-
         while i > 0 and j > 0:
             score = matrix[i][j]
             diag = matrix[i-1][j-1]
             left = matrix[i][j-1]
             top = matrix[i-1][j]
-
             if score == (diag + substitution_cost[sequence1[i-1]][sequence2[j-1]]):
                 traceback.append("diagonal")
                 i -= 1
@@ -104,9 +101,11 @@ class NeedlemanWunsch:
                 j -= 1
 
         while i > 0:
+            traceback.append("up")
             i -= 1
 
         while j > 0:
+            traceback.append("left")
             j -= 1
 
         return traceback
@@ -134,9 +133,9 @@ class NeedlemanWunsch:
                 i -= 1
 
             elif step == "left":
-                seq1_align -= sequence1[i]
-                seq2_align -= '-'
-                i -= 1
+                seq1_align += '-'
+                seq2_align += sequence2[j]
+                j -= 1
 
         while j >= 0:
             seq1_align += '-'
@@ -150,20 +149,19 @@ class NeedlemanWunsch:
         return seq1_align[::-1], seq2_align[::-1]
 
 
-
 if __name__ == '__main__':
 
     algo = NeedlemanWunsch()
     # seq1 = algo.read_fasta_file("data/s1.fasta")
     # seq2 = algo.read_fasta_file("data/s2.fasta")
 
-    seq1 = 'GGAACT'
-    seq2 = 'ACTT'
+    seq2 = 'GGAACT'
+    seq1 = 'ATC'
     gap_cost = BLOSUM62_GAP
     scoreMatrix = algo.read_substitution_matrix("data/blosum62.txt")
     finished_matrix = algo.calculate_matrix(seq1, seq2, gap_cost, scoreMatrix)
     traceback = algo.traceback(finished_matrix, seq1, seq2, gap_cost, scoreMatrix)
+    # print(f"{traceback} \n {finished_matrix}")
     align1, align2 = algo.alingment_build(traceback, seq1, seq2)
+    print(f"{align1}\n{align2}")
     # Tool to test o/p https://gtuckerkellogg.github.io/pairwise/demo/
-
-
