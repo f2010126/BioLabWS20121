@@ -161,19 +161,28 @@ def find_score(seq1, seq2, gap_cost, path):
     finished_matrix = algo.calculate_matrix(seq1, seq2, gap_cost, score_matrix)
     traceback = algo.traceback(finished_matrix, seq1, seq2, gap_cost, score_matrix)
     align1, align2 = algo.alingment_build(traceback, seq1, seq2)
-    return align1, align2
+    print(f"{align1}\n{align2}")
 
 
 def test_small():
-    a1, a2 = find_score('ATC', 'GGAACT', BLOSUM62_GAP, BLOSUM62_PATH)
-    print(f"{a1}\n{a2}")
+    find_score('ATC', 'GGAACT', BLOSUM62_GAP, BLOSUM62_PATH)
 
 
 def test_s1s2():
     seq1 = algo.read_fasta_file("data/s1.fasta")
     seq2 = algo.read_fasta_file("data/s2.fasta")
-    a1, a2 = find_score(seq1, seq2, BLOSUM62_GAP, BLOSUM62_PATH)
-    print(f"{a1}\n{a2}")
+    find_score(seq1, seq2, BLOSUM62_GAP, BLOSUM62_PATH)
+
+
+def test_s1s3():
+    seq1 = algo.read_fasta_file("data/s1.fasta")
+    seq2 = algo.read_fasta_file("data/s3.fasta")
+    find_score(seq1, seq2, BLOSUM62_GAP, BLOSUM62_PATH)
+
+def test_s1s4():
+    seq1 = algo.read_fasta_file("data/s1.fasta")
+    seq2 = algo.read_fasta_file("data/s4.fasta")
+    find_score(seq1, seq2, BLOSUM62_GAP, BLOSUM62_PATH)
 
 
 if __name__ == '__main__':
