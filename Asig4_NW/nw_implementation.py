@@ -237,6 +237,7 @@ def test_s1s3():
     seq2 = algo.read_fasta_file("data/s3.fasta")
     find_score(seq1, seq2, BLOSUM62_GAP, BLOSUM62_PATH)
 
+
 def test_s1s4():
     seq1 = algo.read_fasta_file("data/s1.fasta")
     seq2 = algo.read_fasta_file("data/s4.fasta")
