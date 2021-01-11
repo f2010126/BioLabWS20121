@@ -1,10 +1,12 @@
-import fastaparser
+import fastaparser # for reading the fasta file
 import numpy as np
 import pandas as pd
 
 
 PAM_GAP = -8
 BLOSUM62_GAP = -6
+BLOSUM62_PATH = "data/blosum62.txt"
+PAM_PATH = "data/pam250.txt"
 
 
 class NeedlemanWunsch:
@@ -66,12 +68,14 @@ class NeedlemanWunsch:
         First initialize the matrix then fill it in from top to bottom.
         """
         matrix = self.init_matrix(sequence1, sequence2, gap_opening_cost)
-        for i in range(1, len(seq1)+1):
-            for j in range(1, len(seq2)+1):
+        for i in range(1, len(sequence1)+1):
+            for j in range(1, len(sequence2)+1):
                 top = matrix[i][j-1]  # insert
                 left = matrix[i-1][j]  # delete
                 diag = matrix[i-1][j-1]
-                matrix[i][j] = self.new_value_computation(seq1[i-1], seq2[j-1], gap_cost, scoreMatrix, diag, top, left)
+                matrix[i][j] = self.new_value_computation(sequence1[i-1], sequence2[j-1],
+                                                          gap_opening_cost, substitution_cost,
+                                                          diag, top, left)
 
         return matrix
 
@@ -149,19 +153,30 @@ class NeedlemanWunsch:
         return seq1_align[::-1], seq2_align[::-1]
 
 
-if __name__ == '__main__':
+algo = NeedlemanWunsch()
 
-    algo = NeedlemanWunsch()
-    # seq1 = algo.read_fasta_file("data/s1.fasta")
-    # seq2 = algo.read_fasta_file("data/s2.fasta")
 
-    seq2 = 'GGAACT'
-    seq1 = 'ATC'
-    gap_cost = BLOSUM62_GAP
-    scoreMatrix = algo.read_substitution_matrix("data/blosum62.txt")
-    finished_matrix = algo.calculate_matrix(seq1, seq2, gap_cost, scoreMatrix)
-    traceback = algo.traceback(finished_matrix, seq1, seq2, gap_cost, scoreMatrix)
-    # print(f"{traceback} \n {finished_matrix}")
+def find_score(seq1, seq2, gap_cost, path):
+    score_matrix = algo.read_substitution_matrix(path)
+    finished_matrix = algo.calculate_matrix(seq1, seq2, gap_cost, score_matrix)
+    traceback = algo.traceback(finished_matrix, seq1, seq2, gap_cost, score_matrix)
     align1, align2 = algo.alingment_build(traceback, seq1, seq2)
-    print(f"{align1}\n{align2}")
+    return align1, align2
+
+
+def test_small():
+    a1, a2 = find_score('ATC', 'GGAACT', BLOSUM62_GAP, BLOSUM62_PATH)
+    print(f"{a1}\n{a2}")
+
+
+def test_s1s2():
+    seq1 = algo.read_fasta_file("data/s1.fasta")
+    seq2 = algo.read_fasta_file("data/s2.fasta")
+    a1, a2 = find_score(seq1, seq2, BLOSUM62_GAP, BLOSUM62_PATH)
+    print(f"{a1}\n{a2}")
+
+
+if __name__ == '__main__':
+    test_small()
+    test_s1s2()
     # Tool to test o/p https://gtuckerkellogg.github.io/pairwise/demo/
