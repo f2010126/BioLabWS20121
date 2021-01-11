@@ -27,6 +27,13 @@ class NeedlemanWunsch:
         Implement reading the scores file.
         It can be stored as a dictionary of example:
         scores[("A", "R")] = -1
+
+        Args:
+            file_substitution_matrix: file path with matrix scores
+
+        Returns:
+            dataframe with scores for easier lookup
+
         """
         submatrix = pd.read_csv(file_substitution_matrix,
                                 sep=" ",
@@ -40,6 +47,14 @@ class NeedlemanWunsch:
         """
         Implement initialization of the matrix.
         Make sure you picked the right dimention and correctly initilized the first row and the first column.
+
+        Args:
+            sequence1: The first input sequence
+            sequence2: The second i/p sequence
+            gap_cost: gap openeing cost
+
+        Returns:
+            matrix with first row and column initialised with the gap penalty
         """
         n = len(sequence1) + 1
         m = len(sequence2) + 1
@@ -57,6 +72,20 @@ class NeedlemanWunsch:
         In this function we assume that we want to compute the value in the new cell in the matrix.
         Assume that the values "to the left", "to the top" and "top left" are already computed and provided
         as the input to the function. Also we know what characters in both sequences correspond to the given cell.
+
+        Args:
+            char_seq1: character from seq 1
+            char_seq2: character from seq 2
+            gap_cost: linear gap cost
+            substitution_matrix: scores to loop up
+            diag_val: value from diagonal
+            left_val: value from left
+            top_val: value from top
+
+        Returns:
+            value of current cell
+
+
         """
         match = diag_val + substitution_matrix[char_seq1][char_seq2]
         cell_value = max(top_val + gap_cost, match, left_val + gap_cost)  # cell_value
@@ -66,6 +95,15 @@ class NeedlemanWunsch:
         """
         Implement the step of complete computation of the matrix
         First initialize the matrix then fill it in from top to bottom.
+
+        Args:
+            sequence1: character from seq 1
+            sequence2: character from seq 2
+            gap_opening_cost: linear gap cost
+            substitution_cost: scores to loop up
+
+        Returns:
+            completed matrix
         """
         matrix = self.init_matrix(sequence1, sequence2, gap_opening_cost)
         for i in range(1, len(sequence1)+1):
@@ -84,9 +122,20 @@ class NeedlemanWunsch:
         Implement the traceback part of the algorithm
         With the given matrix traceback which cells were taken to complete the path from
         the top left corner to the bottom right corner.
+
+        Args:
+            matrix: completed score matrix
+            sequence1: character from seq 1
+            sequence2: character from seq 2
+            gap_opening_cost: linear gap cost
+            substitution_cost: scores to loop up
+
+        Returns:
+            traceback to calculate optimal alignment
         """
         i = len(sequence1)
         j = len(sequence2)
+        align_score = matrix[i][j]  # score in bottom right cell
         traceback = []
         while i > 0 and j > 0:
             score = matrix[i][j]
@@ -112,12 +161,20 @@ class NeedlemanWunsch:
             traceback.append("left")
             j -= 1
 
-        return traceback
+        return traceback, align_score
 
     def alingment_build(self, traceback, sequence1, sequence2):
         """
         Implement the alingment creation.
         Given the traceback figure out which editing operations were used to create the alingment.
+
+        Args:
+            sequence1: character from seq 1
+            sequence2: character from seq 2
+            traceback: traceback to build alignment
+
+        Returns:
+            completed alignment strings
         """
         i = len(sequence1) - 1
         j = len(sequence2) - 1
@@ -159,8 +216,9 @@ algo = NeedlemanWunsch()
 def find_score(seq1, seq2, gap_cost, path):
     score_matrix = algo.read_substitution_matrix(path)
     finished_matrix = algo.calculate_matrix(seq1, seq2, gap_cost, score_matrix)
-    traceback = algo.traceback(finished_matrix, seq1, seq2, gap_cost, score_matrix)
+    traceback, alignment_score = algo.traceback(finished_matrix, seq1, seq2, gap_cost, score_matrix)
     align1, align2 = algo.alingment_build(traceback, seq1, seq2)
+    print(f"Score: {alignment_score}")
     print(f"{align1}\n{align2}")
 
 
@@ -186,6 +244,6 @@ def test_s1s4():
 
 
 if __name__ == '__main__':
-    test_small()
+    # test_small()  # test a small sequence
     test_s1s2()
     # Tool to test o/p https://gtuckerkellogg.github.io/pairwise/demo/
