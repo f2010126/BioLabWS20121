@@ -1,25 +1,51 @@
 
 def gotoh(fasta_file_1, fasta_file_2, cost_gap_open, file_substitution_matrix=None):
     """Put your code here"""
-    return 0  # alignment_score, alignments
+    algo = Gotoh()
+    alignment_score, alignments = algo.run(fasta_file_1, fasta_file_2, cost_gap_open, file_substitution_matrix)
+    return alignment_score, alignments
 
 
 class Gotoh:
 
     def run(self, fasta_file_1, fasta_file_2, cost_gap_open, file_substitution_matrix=None):
         """Put your code here"""
-        return 0  # alignment_score, alignments
+        seq1 = self.read_fasta_file(fasta_file_1)
+        seq2 = self.read_fasta_file(fasta_file_2)
+        sub_matrix = self.read_substitution_matrix(file_substitution_matrix)
+        return seq1, seq2  # alignment_score, alignments
 
     def read_fasta_file(self, fasta_file):
-        """Implement reading the fasta file"""
-        return '-'  # sequence
+        """Implement reading the fasta file
+
+        Args:
+            fasta_file: file loctaion of sequence
+
+        Returns:
+              sequence
+        """
+        for line in open(fasta_file):
+            li = line.strip()
+            if not li.startswith(">"):
+                return line.rstrip()  # sequence
 
     def read_substitution_matrix(self, file_substitution_matrix):
         """
         Implement reading the scores file.
         It can be stored as a dictionary of example:
         scores[("A", "R")] = -1
+
+        Args:
+            file_substitution_matrix: location of substituition matrix
+
+        Returns:
+            substituition matrix
+
         """
+        for line in open(file_substitution_matrix):
+            li = line.strip()
+            if not li.startswith("#"):
+                print(line.rstrip())
 
         return 0  # scores
 
@@ -103,3 +129,23 @@ class Gotoh:
         AACA
         """
         return 0  # score
+
+
+SCORES_DNA = {'match': 1,
+              'mismatch': -1,
+              'alpha': -3,
+              'beta': -1}
+
+SCORES_PRO = {'alpha': -11,
+              'beta': -1}
+if __name__ == '__main__':
+
+    fasta1 = "data/s1.fasta"
+    fasta2 = "data/s2.fasta"
+    pam_file = "data/pam250.txt"
+    blosum_file = "data/blosum62.txt"
+    gap_open = SCORES_DNA
+    gotoh(fasta1, fasta2, SCORES_DNA, pam_file)
+    # Tool to test o/p http://rna.informatik.uni-freiburg.de/Teaching/index.jsp?toolName=Gotoh
+
+
