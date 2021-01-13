@@ -1,3 +1,4 @@
+import math #  need for infinity and Nan
 
 def gotoh(fasta_file_1, fasta_file_2, cost_gap_open, file_substitution_matrix=None):
     """Put your code here"""
@@ -10,9 +11,15 @@ class Gotoh:
 
     def run(self, fasta_file_1, fasta_file_2, cost_gap_open, file_substitution_matrix=None):
         """Put your code here"""
-        seq1 = self.read_fasta_file(fasta_file_1)
-        seq2 = self.read_fasta_file(fasta_file_2)
+        # seq1 = self.read_fasta_file(fasta_file_1)
+        # seq2 = self.read_fasta_file(fasta_file_2)
+        seq1 = 'CG'
+        seq2 = 'CCGA'
         sub_matrix = self.read_substitution_matrix(file_substitution_matrix)
+        p_matrix = self.init_matrix_p(seq1, seq2)
+        q_matrix = self.init_matrix_q(seq1, seq2)
+        d_matrix = self.init_matrix_d(seq1, seq2, SCORES_DNA["alpha"], SCORES_DNA["beta"])
+
         return seq1, seq2  # alignment_score, alignments
 
     def read_fasta_file(self, fasta_file):
@@ -52,20 +59,58 @@ class Gotoh:
     def init_matrix_d(self, seq_1, seq_2, cost_gap_open, cost_gap_extend):
         """
         Implement initialization of the matrix D
+        Args:
+            seq_1: first sequence
+            seq_2: second sequence
+            cost_gap_open:
+            cost_gap_extend:
         """
-        return []  # matrix_d
+        n = len(seq_1) + 1
+        m = len(seq_2) + 1
+        matrix_d = [[0] * m] * n
+        # add values open + i * extend
+        matrix_d[0] = [cost_gap_open + j * cost_gap_extend for j in range(m)]
+        #  TODO: FIX THIS!!
+        for row, ctr in zip(matrix_d, range(n)):
+            row[0] = cost_gap_open + ctr * cost_gap_extend
+        return matrix_d
+
 
     def init_matrix_p(self, seq_1, seq_2):
         """
         Implement initialization of the matrix P
+        Args:
+            seq_1: first sequence
+            seq_2: second sequence
+        Returns:
+            initialised P matrix
         """
-        return []  # matrix_p
+        n = len(seq_1) + 1
+        m = len(seq_2) + 1
+        matrix_p = [[0] * m] * n
+        matrix_p[0][0] = math.nan
+        matrix_p[0] = [- math.inf] * m
+        matrix_p[0][0] = 'X'
+        return matrix_p
 
     def init_matrix_q(self, seq_1, seq_2):
         """
         Implement initialization of the matrix Q
+        Args:
+            seq_1: first sequence
+            seq_2: second sequence
+        Returns:
+            initialised P matrix
         """
-        return []  # matrix_q
+        n = len(seq_1) + 1
+        m = len(seq_2) + 1
+        matrix_q = [[0] * m] * n
+        matrix_q[0][0] = - math.inf
+        matrix_q[0] = [math.nan] * m
+        matrix_q[0][0] = 'X'
+        self.visualize_matrix(matrix_q)
+        return matrix_q
+
 
     def complete_d_p_q_computation(self, seq_1, seq_2, cost_gap_open, cost_gap_extend, substitutions=None):
         """
@@ -118,6 +163,8 @@ class Gotoh:
         Implement the visualization of a matrix.
         Can be used for self check
         """
+        for line in matrix:
+            print(line)
 
     def score_of_alignment(self, align_seq1, align_seq2, cost_gap_open,
                            cost_gap_extension, substitutions=None):
