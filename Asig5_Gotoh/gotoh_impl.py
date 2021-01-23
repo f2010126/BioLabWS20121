@@ -20,9 +20,10 @@ class Gotoh:
         # seq2 = self.read_fasta_file(fasta_file_2)
         seq1 = 'CG'
         seq2 = 'CCGA'
-        p_matrix = self.init_matrix_p(seq1, seq2)
-        q_matrix = self.init_matrix_q(seq1, seq2)
-        d_matrix = self.init_matrix_d(seq1, seq2, SCORES_DNA["alpha"], SCORES_DNA["beta"])
+        self.p_matrix = self.init_matrix_p(seq1, seq2)
+        self.q_matrix = self.init_matrix_q(seq1, seq2)
+        self.d_matrix = self.init_matrix_d(seq1, seq2, SCORES_DNA["alpha"], SCORES_DNA["beta"])
+        self.complete_d_p_q_computation(seq1,seq2,SCORES_DNA["alpha"],SCORES_DNA["beta"])
 
         return seq1, seq2  # alignment_score, alignments
 
@@ -62,6 +63,7 @@ class Gotoh:
                   "W": 17, "Y": 18, "V": 19}
         return scores, lookup
 
+    # get score
     def read_substitution_matrix(self, char1, char2):
         """
         Implement reading the scores file.
@@ -103,7 +105,7 @@ class Gotoh:
         return matrix_d
 
     def costFunction(self, i, open, extend):
-        return open + i*extend
+        return open + i * extend
 
     def init_matrix_p(self, seq_1, seq_2):
         """
@@ -145,12 +147,48 @@ class Gotoh:
         matrix_q[0][0] = 'X'
         return matrix_q
 
+
+    def dna_match_mismatch(self, char1, char2):
+        """
+         Args:
+            char1: character from seq1
+            char2: character from seq1
+
+        Returns:
+            score based on the match/mismatch
+        """
+        if char1 == char2:
+            return SCORES_DNA['match']
+        elif char1 != char2:
+            return SCORES_DNA['mismatch']
+
+    def affine_gap(self, i):
+        return -3 -i #SCORES_DNA["alpha"] + SCORES_DNA["beta"]*i  # g(k) = -3 - k
+
+    def calculate_p(self, value_d, value_p):
+        return max(value_d + self.affine_gap(1), value_p + SCORES_DNA["beta"])
+
+    def calculate_q(self, value_d, value_q):
+        return max(value_d + self.affine_gap(1), value_q + SCORES_DNA["beta"])
+
+    def calculate_d(self, value_d, value_p, value_q, char1, char2):
+        new_d = value_d + self.dna_match_mismatch(char1, char2)
+        return max(value_p,max(value_q,new_d))
+
     def complete_d_p_q_computation(self, seq_1, seq_2, cost_gap_open, cost_gap_extend, substitutions=None):
         """
         Implement the recursive computation of matrices D, P and Q
         """
-        # TODO:
+        n = len(seq_1) + 1
+        m = len(seq_2) + 1
+        for i in range(1, n):
+            for j in range(1, m):
+                self.p_matrix[i][j] = self.calculate_p(self.d_matrix[i - 1][j], self.p_matrix[i - 1][j])
+                self.q_matrix[i][j] = self.calculate_q(self.d_matrix[i][j - 1], self.q_matrix[i][j - 1])
+                self.d_matrix[i][j] = self.calculate_d(self.d_matrix[i - 1][j - 1], self.p_matrix[i][j],
+                                                       self.q_matrix[i][j], seq_1[i - 1], seq_2[j - 1])
 
+        self.visualize_matrix(self.d_matrix)
 
     """
     You are working with 3 matrices simultaneously.
@@ -186,6 +224,7 @@ class Gotoh:
         Implement a function which checks if the traceback path is complete.
         """
         # TODO:
+
     def alignment(self, traceback_path, seq1, seq2):
         """
         Implement creation of the alignment with given traceback path and sequences1 and 2
@@ -224,7 +263,6 @@ SCORES_DNA = {'match': 1,
 SCORES_PRO = {'alpha': -11,
               'beta': -1}
 if __name__ == '__main__':
-
     fasta1 = "data/s1.fasta"
     fasta2 = "data/s2.fasta"
     pam_file = "data/pam250.txt"
