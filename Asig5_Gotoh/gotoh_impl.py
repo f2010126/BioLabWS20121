@@ -1,13 +1,18 @@
-import math  #  need for infinity and Nan
+import math  # need for infinity and Nan
+
 
 def gotoh(fasta_file_1, fasta_file_2, cost_gap_open, file_substitution_matrix=None):
     """Put your code here"""
-    algo = Gotoh()
+    algo = Gotoh(file_substitution_matrix)
     alignment_score, alignments = algo.run(fasta_file_1, fasta_file_2, cost_gap_open, file_substitution_matrix)
     return alignment_score, alignments
 
 
 class Gotoh:
+
+    def __init__(self, file_substitution_matrix):
+        print("")
+        self.score_matrix, self.lookup = self.set_up_substitution_matrix(file_substitution_matrix)
 
     def run(self, fasta_file_1, fasta_file_2, cost_gap_open, file_substitution_matrix=None):
         """Put your code here"""
@@ -15,7 +20,6 @@ class Gotoh:
         # seq2 = self.read_fasta_file(fasta_file_2)
         seq1 = 'CG'
         seq2 = 'CCGA'
-        # sub_matrix = self.read_substitution_matrix(file_substitution_matrix)
         p_matrix = self.init_matrix_p(seq1, seq2)
         q_matrix = self.init_matrix_q(seq1, seq2)
         d_matrix = self.init_matrix_d(seq1, seq2, SCORES_DNA["alpha"], SCORES_DNA["beta"])
@@ -36,25 +40,46 @@ class Gotoh:
             if not li.startswith(">"):
                 return line.rstrip()  # sequence
 
-    def read_substitution_matrix(self, file_substitution_matrix):
+    def set_up_substitution_matrix(self, file_substitution_matrix):
+        """
+        Args:
+            file_substitution_matrix: location of lookup
+
+        Returns:
+            score matrix and lookup
+        """
+        scores = []
+        for line in open(file_substitution_matrix):
+            li = line.strip()
+            if not li.startswith("#"):
+                scores.append(line.rstrip().split())
+        del scores[0]  # remove the first row of letters
+        for row in scores:  # remove letter from each column
+            del row[0]
+
+        lookup = {"A": 0, "R": 1, "N": 2, "D": 3, "C": 4, "Q": 5, "E": 6, "G": 7, "H": 8,
+                  "I": 9, "L": 10, "K": 11, "M": 12, "F": 13, "P": 14, "S": 15, "T": 16,
+                  "W": 17, "Y": 18, "V": 19}
+        return scores, lookup
+
+    def read_substitution_matrix(self, char1, char2):
         """
         Implement reading the scores file.
         It can be stored as a dictionary of example:
         scores[("A", "R")] = -1
 
         Args:
-            file_substitution_matrix: location of substituition matrix
+            char1: character from seq1
+            char2: character from seq1
 
         Returns:
-            substituition matrix
+            score based on the lookup
 
         """
-        for line in open(file_substitution_matrix):
-            li = line.strip()
-            if not li.startswith("#"):
-                print(line.rstrip())
-
-        return 0  # scores
+        if char1 in self.lookup and char2 in self.lookup:
+            return self.score_matrix[self.lookup[char1]][self.lookup[char2]]
+        else:
+            return -8
 
     def init_matrix_d(self, seq_1, seq_2, cost_gap_open, cost_gap_extend):
         """
@@ -75,7 +100,6 @@ class Gotoh:
             matrix_d[i][0] = self.costFunction(i, cost_gap_open, cost_gap_extend)
         for j in range(1, m):
             matrix_d[0][j] = self.costFunction(j, cost_gap_open, cost_gap_extend)
-        self.visualize_matrix(matrix_d)
         return matrix_d
 
     def costFunction(self, i, open, extend):
@@ -99,7 +123,6 @@ class Gotoh:
         for j in range(1, m):
             matrix_p[0][j] = -math.inf
         matrix_p[0][0] = 'X'
-        self.visualize_matrix(matrix_p)
         return matrix_p
 
     def init_matrix_q(self, seq_1, seq_2):
@@ -120,13 +143,14 @@ class Gotoh:
         for j in range(1, m):
             matrix_q[0][j] = math.nan
         matrix_q[0][0] = 'X'
-        self.visualize_matrix(matrix_q)
         return matrix_q
 
     def complete_d_p_q_computation(self, seq_1, seq_2, cost_gap_open, cost_gap_extend, substitutions=None):
         """
         Implement the recursive computation of matrices D, P and Q
         """
+        # TODO:
+
 
     """
     You are working with 3 matrices simultaneously.
@@ -145,6 +169,7 @@ class Gotoh:
         Implement 'find_all_previous' and check_complete first.
 
         """
+        # TODO:
         return []  # all_paths
 
     def find_all_previous(self, cell, seq1, seq2, d_matrix, p_matrix, q_matrix,
@@ -153,18 +178,19 @@ class Gotoh:
         """
         Implement a search for all possible previous cells.
         """
-
+        # TODO:
         return parent_cells
 
     def check_complete(self, path):
         """
         Implement a function which checks if the traceback path is complete.
         """
-
+        # TODO:
     def alignment(self, traceback_path, seq1, seq2):
         """
         Implement creation of the alignment with given traceback path and sequences1 and 2
         """
+        # TODO:
         return '-', '-'  # alignment_seq1, alignment_seq2
 
     # HELPER FUNCTIONS FOR SELF CHECK
@@ -186,6 +212,7 @@ class Gotoh:
         --CG
         AACA
         """
+        # TODO:
         return 0  # score
 
 
