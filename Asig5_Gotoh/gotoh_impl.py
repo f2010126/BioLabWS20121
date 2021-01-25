@@ -1,20 +1,34 @@
 import math  # need for infinity and Nan
 
 
-def gotoh(fasta_file_1, fasta_file_2, cost_gap_open, file_substitution_matrix=None):
+def gotoh(fasta_file_1, fasta_file_2, scores, is_dna=False, file_substitution_matrix=None):
     """Put your code here"""
-    algo = Gotoh(file_substitution_matrix)
-    alignment_score, alignments = algo.run(fasta_file_1, fasta_file_2, cost_gap_open, file_substitution_matrix)
+    algo = Gotoh(file_substitution_matrix, scores, is_dna)
+    alignment_score, alignments = algo.run(fasta_file_1, fasta_file_2)
     return alignment_score, alignments
 
 
 class Gotoh:
 
-    def __init__(self, file_substitution_matrix):
-        print("")
-        self.score_matrix, self.lookup = self.set_up_substitution_matrix(file_substitution_matrix)
+    def __init__(self, file_substitution_matrix, scores, use_dna):
+        self.d_matrix = [[]]
+        self.p_matrix = [[]]
+        self.q_matrix = [[]]
+        self.score_matrix = []
+        self.lookup = {}
+        self.alpha = scores['alpha']
+        self.beta = scores['beta']
+        self.use_dna = use_dna
+        if not self.use_dna:
+            self.set_up_substitution_matrix(file_substitution_matrix)
+        # counters for traceback over 3 matrices
+        self.i = 0
+        self.j = 0
+        self.computedAlignment = []
+        self.paths = [()]
+        self.all_traces = [[]]  # Track the actions diag, left up form pQD to be returned
 
-    def run(self, fasta_file_1, fasta_file_2, cost_gap_open, file_substitution_matrix=None):
+    def run(self, fasta_file_1, fasta_file_2):
         """Put your code here"""
         # seq1 = self.read_fasta_file(fasta_file_1)
         # seq2 = self.read_fasta_file(fasta_file_2)
@@ -22,9 +36,10 @@ class Gotoh:
         seq2 = 'CCGA'
         self.p_matrix = self.init_matrix_p(seq1, seq2)
         self.q_matrix = self.init_matrix_q(seq1, seq2)
-        self.d_matrix = self.init_matrix_d(seq1, seq2, SCORES_DNA["alpha"], SCORES_DNA["beta"])
-        self.complete_d_p_q_computation(seq1,seq2,SCORES_DNA["alpha"],SCORES_DNA["beta"])
-
+        self.d_matrix = self.init_matrix_d(seq1, seq2, self.alpha, self.beta)
+        self.complete_d_p_q_computation(seq1, seq2, self.alpha, self.beta)
+        trace_list = self.compute_all_tracebacks(seq1, seq2, self.d_matrix,
+                                                 self.p_matrix, self.q_matrix, self.alpha, self.beta)
         return seq1, seq2  # alignment_score, alignments
 
     def read_fasta_file(self, fasta_file):
@@ -64,6 +79,7 @@ class Gotoh:
         return scores, lookup
 
     # get score
+
     def read_substitution_matrix(self, char1, char2):
         """
         Implement reading the scores file.
@@ -83,6 +99,29 @@ class Gotoh:
         else:
             return -8
 
+    def dna_match_mismatch(self, char1, char2):
+        """
+         Args:
+            char1: character from seq1
+            char2: character from seq1
+
+        Returns:
+            score based on the match/mismatch
+        """
+        if char1 == char2:
+            return SCORES_DNA['match']
+        elif char1 != char2:
+            return SCORES_DNA['mismatch']
+
+    def get_score(self, d, char1, char2):
+        if self.use_dna:
+            return d + self.dna_match_mismatch(char1, char2)
+        else:
+            return d + self.read_substitution_matrix(char1, char2)
+
+    def affine_gap(self, i):
+        return self.alpha + i * self.beta  # SCORES_DNA["alpha"] + SCORES_DNA["beta"]*i  # g(k) = -3 - k
+
     def init_matrix_d(self, seq_1, seq_2, cost_gap_open, cost_gap_extend):
         """
         Implement initialization of the matrix D
@@ -99,13 +138,10 @@ class Gotoh:
 
         # add values open + i * extend
         for i in range(1, n):
-            matrix_d[i][0] = self.costFunction(i, cost_gap_open, cost_gap_extend)
+            matrix_d[i][0] = self.affine_gap(i)
         for j in range(1, m):
-            matrix_d[0][j] = self.costFunction(j, cost_gap_open, cost_gap_extend)
+            matrix_d[0][j] = self.affine_gap(j)
         return matrix_d
-
-    def costFunction(self, i, open, extend):
-        return open + i * extend
 
     def init_matrix_p(self, seq_1, seq_2):
         """
@@ -147,33 +183,15 @@ class Gotoh:
         matrix_q[0][0] = 'X'
         return matrix_q
 
-
-    def dna_match_mismatch(self, char1, char2):
-        """
-         Args:
-            char1: character from seq1
-            char2: character from seq1
-
-        Returns:
-            score based on the match/mismatch
-        """
-        if char1 == char2:
-            return SCORES_DNA['match']
-        elif char1 != char2:
-            return SCORES_DNA['mismatch']
-
-    def affine_gap(self, i):
-        return -3 -i #SCORES_DNA["alpha"] + SCORES_DNA["beta"]*i  # g(k) = -3 - k
-
     def calculate_p(self, value_d, value_p):
-        return max(value_d + self.affine_gap(1), value_p + SCORES_DNA["beta"])
+        return max(value_d + self.affine_gap(1), value_p + self.beta)
 
     def calculate_q(self, value_d, value_q):
-        return max(value_d + self.affine_gap(1), value_q + SCORES_DNA["beta"])
+        return max(value_d + self.affine_gap(1), value_q + self.beta)
 
     def calculate_d(self, value_d, value_p, value_q, char1, char2):
-        new_d = value_d + self.dna_match_mismatch(char1, char2)
-        return max(value_p,max(value_q,new_d))
+        new_d = self.get_score(value_d, char1, char2)
+        return max(value_p, max(value_q, new_d))
 
     def complete_d_p_q_computation(self, seq_1, seq_2, cost_gap_open, cost_gap_extend, substitutions=None):
         """
@@ -187,8 +205,9 @@ class Gotoh:
                 self.q_matrix[i][j] = self.calculate_q(self.d_matrix[i][j - 1], self.q_matrix[i][j - 1])
                 self.d_matrix[i][j] = self.calculate_d(self.d_matrix[i - 1][j - 1], self.p_matrix[i][j],
                                                        self.q_matrix[i][j], seq_1[i - 1], seq_2[j - 1])
-
-        self.visualize_matrix(self.d_matrix)
+                self.visualize_matrix(self.p_matrix)
+                self.visualize_matrix(self.q_matrix)
+                self.visualize_matrix(self.d_matrix)
 
     """
     You are working with 3 matrices simultaneously.
@@ -208,29 +227,116 @@ class Gotoh:
 
         """
         # TODO:
-        return []  # all_paths
+        # using structure [((row,column),"matrix")] for traceback
+        self.i = len(d_matrix) - 1
+        self.j = len(d_matrix[0]) - 1
+        self.trace_ctr = 0  # for copys path
+        self.paths = [((self.i, self.j), 'D')]  # track what matrix and row/col for matrix traversal
+        self.all_traces = [[]]  # Track the actions diag, left up form pQD to be returned
 
-    def find_all_previous(self, cell, seq1, seq2, d_matrix, p_matrix, q_matrix,
-                          cost_gap_open, cost_gap_extend, substitution=None):
-        parent_cells = []
-        """
-        Implement a search for all possible previous cells.
-        """
-        # TODO:
-        return parent_cells
+        while self.i > 0 or self.j > 0:
+            if self.paths[self.trace_ctr][1] == 'D':
+                # check on main matrix
+                self.trace_d(seq1[self.i - 1], seq2[self.j - 1])
+            elif self.paths[self.trace_ctr][1] == 'P':
+                self.trace_p()
+            elif self.paths[self.trace_ctr][1] == 'Q':
+                self.trace_q()
+            (self.i, self.j) = self.paths[self.trace_ctr][0]
 
-    def check_complete(self, path):
-        """
-        Implement a function which checks if the traceback path is complete.
-        """
-        # TODO:
+        return self.all_traces  # all_paths
 
-    def alignment(self, traceback_path, seq1, seq2):
+    def trace_d(self, char1, char2):
+        # var to track i, j local
+        local_i = self.i
+        local_j = self.j
+        split = False
+        if self.j > 0 and self.i > 0:
+            if self.d_matrix[self.i][self.j] == \
+                    self.d_matrix[self.i - 1][self.j - 1] + self.dna_match_mismatch(char1, char2):
+                print(f"came from D matrix diagonal")
+                self.all_traces[self.trace_ctr].append('diag_D')
+                local_i -= 1
+                local_j -= 1
+                split = False
+            if self.d_matrix[self.i][self.j] == self.q_matrix[self.i][self.j]:  # possible other way
+                print(f"SPlit from Q ,go to Q")
+
+            if self.d_matrix[self.i][self.j] == self.p_matrix[self.i][self.j]:  # another way
+                print(f"split from P ,go to P")
+
+    def trace_p(self):
+        # var to track i, j local
+        split = False
+        if self.i > 0:
+            if self.p_matrix[self.i][self.j] == self.d_matrix[self.i - 1][self.j] + self.affine_gap(1):
+                self.all_traces[self.trace_ctr].append('up_D')
+                i, j = self.paths[self.trace_ctr][0]
+                self.paths[self.trace_ctr] = ((i - 1, j), 'D')  # <--split happened
+                split = True
+            if self.p_matrix[self.i][self.j] == self.p_matrix[self.i - 1][self.j] + SCORES_DNA['beta']:
+                if split:
+                    self.all_traces.append(self.all_traces[self.trace_ctr][0:-1])
+                    self.all_traces[len(self.all_traces) - 1].append('up_P')
+                    self.paths.append(((self.i - 1, self.j), 'P'))
+                else:
+                    self.all_traces[self.trace_ctr].append('up_P')
+                    i, j = self.paths[self.trace_ctr][0]
+                    self.paths[self.trace_ctr] = ((i - 1, j), 'P')
+
+    def trace_q(self):
+        split = False
+        if self.j > 0:
+            if self.q_matrix[self.i][self.j] == self.d_matrix[self.i][self.j - 1] + self.affine_gap(1):
+                self.all_traces[self.trace_ctr].append('left_D')
+                i, j = self.paths[self.tracebackStackIndex][0]
+                self.paths[self.trace_ctr] = ((i, j - 1), 'D')  # <--split happened
+                split = True
+
+            if self.q_matrix[self.i][self.j] == self.q_matrix[self.i][self.j - 1] + SCORES_DNA['beta']:
+                if split:
+                    self.all_traces.append(self.all_traces[self.trace_ctr][0:-1])
+                    self.all_traces[len(self.all_traces) - 1].append('left_Q')
+                    self.paths.append(((self.i, self.j - 1), 'Q'))
+                else:
+                    self.all_traces[self.trace_ctr].append('left_Q')
+                    self.paths[self.trace_ctr] = ((self.i, self.j - 1), 'Q')
+
+    def alignment(self, traceback, seq1, seq2):
         """
         Implement creation of the alignment with given traceback path and sequences1 and 2
         """
-        # TODO:
-        return '-', '-'  # alignment_seq1, alignment_seq2
+        i = len(seq1) - 1
+        j = len(seq2) - 1
+        seq1_align = ""
+        seq2_align = ""
+        for step in traceback:
+            if step == "diag_D":
+                seq1_align += seq1[i]
+                seq2_align += seq2[j]
+                i -= 1
+                j -= 1
+
+            elif step == "up_D" or step == 'up_P':
+                seq1_align += seq1[i]
+                seq2_align += '-'
+                i -= 1
+
+            elif step == "left_D" or step == 'left_Q':
+                seq1_align += '-'
+                seq2_align += seq2[j]
+                j -= 1
+
+        while j >= 0:
+            seq1_align += '-'
+            seq2_align += seq2[j]
+            j -= 1
+
+        while i >= 0:
+            seq2_align += '-'
+            seq1_align += seq1[i]
+            i -= 1
+        return seq1_align[::-1], seq2_align[::-1]
 
     # HELPER FUNCTIONS FOR SELF CHECK
 
@@ -268,5 +374,10 @@ if __name__ == '__main__':
     pam_file = "data/pam250.txt"
     blosum_file = "data/blosum62.txt"
     gap_open = SCORES_DNA
-    gotoh(fasta1, fasta2, SCORES_DNA, pam_file)
+    # DNA
+    gotoh(fasta1, fasta2, SCORES_DNA, True)
+    # protien pam
+    # gotoh(fasta1, fasta2, SCORES_PRO, False, pam_file)
+    # protien blosum
+    # gotoh(fasta1, fasta2, SCORES_PRO, False, blosum_file)
     # Tool to test o/p http://rna.informatik.uni-freiburg.de/Teaching/index.jsp?toolName=Gotoh
