@@ -38,9 +38,19 @@ class Gotoh:
         self.q_matrix = self.init_matrix_q(seq1, seq2)
         self.d_matrix = self.init_matrix_d(seq1, seq2, self.alpha, self.beta)
         self.complete_d_p_q_computation(seq1, seq2, self.alpha, self.beta)
+
+        # correct matrices computed
+        # error in traceback for splitting
         trace_list = self.compute_all_tracebacks(seq1, seq2, self.d_matrix,
                                                  self.p_matrix, self.q_matrix, self.alpha, self.beta)
-        return seq1, seq2  # alignment_score, alignments
+
+        all_align = []
+        for path in trace_list:
+            newal = self.alignment(path, seq1, seq2)
+            all_align.append(newal)
+
+
+        return all_align  # alignment_score, alignments
 
     def read_fasta_file(self, fasta_file):
         """Implement reading the fasta file
@@ -231,19 +241,27 @@ class Gotoh:
         self.i = len(d_matrix) - 1
         self.j = len(d_matrix[0]) - 1
         self.trace_ctr = 0  # for copys path
-        self.paths = [((self.i, self.j), 'D')]  # track what matrix and row/col for matrix traversal
+        self.paths[self.trace_ctr] = [self.i, self.j, 'D']  # track what matrix and row/col for matrix traversal
         self.all_traces = [[]]  # Track the actions diag, left up form pQD to be returned
-
-        while self.i > 0 or self.j > 0:
-            if self.paths[self.trace_ctr][1] == 'D':
-                # check on main matrix
-                self.trace_d(seq1[self.i - 1], seq2[self.j - 1])
-            elif self.paths[self.trace_ctr][1] == 'P':
-                self.trace_p()
-            elif self.paths[self.trace_ctr][1] == 'Q':
-                self.trace_q()
-            (self.i, self.j) = self.paths[self.trace_ctr][0]
-
+        traced = False
+        while not traced:
+            while self.i > 0 or self.j > 0:
+                if self.paths[self.trace_ctr][2] == 'D':
+                    # check on main matrix
+                    self.trace_d(seq1[self.i - 1], seq2[self.j - 1])
+                elif self.paths[self.trace_ctr][2] == 'P':
+                    self.trace_p()
+                elif self.paths[self.trace_ctr][2] == 'Q':
+                    self.trace_q()
+                self.i, self.j = self.paths[self.trace_ctr][0], self.paths[self.trace_ctr][1]
+            traced = True
+            # trace from p/q matrix, handle splits
+            for i in range(0, len(self.paths)):
+                if self.paths[i][0] > 0 or self.paths[i][1] > 0:
+                    self.trace_ctr = i
+                    traced = False
+                    break
+            self.i, self.j = self.paths[self.trace_ctr][0], self.paths[self.trace_ctr][1]
         return self.all_traces  # all_paths
 
     def trace_d(self, char1, char2):
@@ -254,16 +272,45 @@ class Gotoh:
         if self.j > 0 and self.i > 0:
             if self.d_matrix[self.i][self.j] == \
                     self.d_matrix[self.i - 1][self.j - 1] + self.dna_match_mismatch(char1, char2):
-                print(f"came from D matrix diagonal")
                 self.all_traces[self.trace_ctr].append('diag_D')
                 local_i -= 1
                 local_j -= 1
-                split = False
-            if self.d_matrix[self.i][self.j] == self.q_matrix[self.i][self.j]:  # possible other way
-                print(f"SPlit from Q ,go to Q")
+                split = True
 
             if self.d_matrix[self.i][self.j] == self.p_matrix[self.i][self.j]:  # another way
-                print(f"split from P ,go to P")
+                if split:
+                    self.all_traces.append(self.all_traces[self.trace_ctr][0:-1])
+                    self.all_traces[len(self.all_traces) - 1].append('go_to_P')
+                    self.paths.append([self.i, self.j, 'P'])
+                else:
+                    self.all_traces[self.trace_ctr].append('go_to_P')
+                    self.paths[self.trace_ctr][2] = 'P'
+
+            if self.d_matrix[self.i][self.j] == self.q_matrix[self.i][self.j]:  # possible other way
+                if split:
+                    self.all_traces.append(self.all_traces[self.trace_ctr][0:-1])
+                    self.all_traces[len(self.all_traces) - 1].append('go_to_Q')
+                    self.paths.append([self.i, self.j, 'Q'])
+                else:
+                    self.all_traces[self.trace_ctr].append('go_to_Q')
+                    self.paths[self.trace_ctr][2] = 'Q'
+                    split = True
+
+        if self.i == 0:
+            self.all_traces[self.trace_ctr].append('left_D')
+            local_j -= 1
+        if self.j == 0:
+            self.all_traces[self.trace_ctr].append('up_D')
+            local_i -= 1
+        # reset
+        if self.i <= 0 or local_i <= 0:
+            local_i = 0
+        if self.j <= 0 or local_j <= 0:
+            local_j = 0
+
+        # 'tuple' object does not support item assignment. use a list
+        self.paths[self.trace_ctr][0] = local_i
+        self.paths[self.trace_ctr][1] = local_j
 
     def trace_p(self):
         # var to track i, j local
@@ -271,36 +318,36 @@ class Gotoh:
         if self.i > 0:
             if self.p_matrix[self.i][self.j] == self.d_matrix[self.i - 1][self.j] + self.affine_gap(1):
                 self.all_traces[self.trace_ctr].append('up_D')
-                i, j = self.paths[self.trace_ctr][0]
-                self.paths[self.trace_ctr] = ((i - 1, j), 'D')  # <--split happened
+                i, j = self.paths[self.trace_ctr][0], self.paths[self.trace_ctr][1]
+                self.paths[self.trace_ctr] = [i - 1, j, 'D']  # <--split happened
                 split = True
             if self.p_matrix[self.i][self.j] == self.p_matrix[self.i - 1][self.j] + SCORES_DNA['beta']:
                 if split:
                     self.all_traces.append(self.all_traces[self.trace_ctr][0:-1])
                     self.all_traces[len(self.all_traces) - 1].append('up_P')
-                    self.paths.append(((self.i - 1, self.j), 'P'))
+                    self.paths.append([self.i - 1, self.j, 'P'])
                 else:
                     self.all_traces[self.trace_ctr].append('up_P')
-                    i, j = self.paths[self.trace_ctr][0]
-                    self.paths[self.trace_ctr] = ((i - 1, j), 'P')
+                    i, j = self.paths[self.trace_ctr][0], self.paths[self.trace_ctr][1]
+                    self.paths[self.trace_ctr] = [i - 1, j, 'P']
 
     def trace_q(self):
         split = False
         if self.j > 0:
             if self.q_matrix[self.i][self.j] == self.d_matrix[self.i][self.j - 1] + self.affine_gap(1):
                 self.all_traces[self.trace_ctr].append('left_D')
-                i, j = self.paths[self.tracebackStackIndex][0]
-                self.paths[self.trace_ctr] = ((i, j - 1), 'D')  # <--split happened
+                i, j = self.paths[self.trace_ctr][0], self.paths[self.trace_ctr][1]
+                self.paths[self.trace_ctr] = [i, j - 1, 'D']  # <--split happened
                 split = True
 
             if self.q_matrix[self.i][self.j] == self.q_matrix[self.i][self.j - 1] + SCORES_DNA['beta']:
                 if split:
                     self.all_traces.append(self.all_traces[self.trace_ctr][0:-1])
                     self.all_traces[len(self.all_traces) - 1].append('left_Q')
-                    self.paths.append(((self.i, self.j - 1), 'Q'))
+                    self.paths.append([self.i, self.j - 1, 'Q'])
                 else:
                     self.all_traces[self.trace_ctr].append('left_Q')
-                    self.paths[self.trace_ctr] = ((self.i, self.j - 1), 'Q')
+                    self.paths[self.trace_ctr] = [self.i, self.j - 1, 'Q']
 
     def alignment(self, traceback, seq1, seq2):
         """
